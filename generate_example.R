@@ -34,4 +34,4 @@ dir.create(file.path(project_dir, "data"), recursive = TRUE,
            showWarnings = FALSE)
 target <- file.path(project_dir, "data", "example_bms.csv")
 write.csv(data, target, row.names = FALSE, na = "", fileEncoding = "UTF-8")
-cat("已生成：", target, "\n")
+cat("Generated: ", target, "\n")

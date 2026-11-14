@@ -1,45 +1,45 @@
-# 单台冷机 COP 快速体检表
+# Single-Chiller COP Quick Check
 
-输入一周 BMS 导出的 CSV，计算单台冷机每个采样点的制冷量、负荷率和 COP，生成一页 PDF 体检表。项目也提供可参数化的 R Markdown 版本，使用 ggplot2 绘图。
+This small R project reads a week of BMS data for one chiller, calculates cooling capacity, load ratio, and instantaneous coefficient of performance (COP), and creates a one-page PDF report. A parameterized R Markdown version uses ggplot2 for the charts.
 
-## 直接运行
+## Quick start
 
-要求 R 4.1 或更新版本。默认 PDF 路径为项目目录下的 `report.pdf`，这条方式只用 R 自带包。
+Requires R 4.1 or later. The default script uses only base R and writes `report.pdf` in the project directory.
 
 ```powershell
 Rscript generate_example.R
 Rscript run.R
 ```
 
-如果 Windows 上没有把 R 加入 PATH，可用 Rscript.exe 的完整路径运行。
+On Windows, use the full path to `Rscript.exe` if R is not on your PATH.
 
-更换机组和数据文件：
+To analyze another chiller or CSV file:
 
 ```powershell
 Rscript run.R --input=C:/data/bms_week.csv --machine=CH-02 --rated_kw=700 --low_cop=3.5 --low_load=0.30 --output=C:/data/CH-02-report.pdf
 ```
 
-参数名后使用等号，不加空格。`rated_kw` 是这台机组的额定制冷量，单位 kW；`low_cop` 和 `low_load` 是可调整的筛查阈值。
+Use `--name=value` with no spaces around the equals sign. `rated_kw` is the chiller's rated cooling capacity in kW. `low_cop` and `low_load` are adjustable screening thresholds.
 
-## CSV 字段
+## Input CSV
 
-第一行应包含以下英文列名，编码为 UTF-8；多台机组可放在同一个文件中。
+The first row must contain the following column names. Save the file as UTF-8. One file may contain multiple chillers; the `machine` option selects one chiller ID.
 
-| 列名 | 含义 | 单位或格式 |
+| Column | Description | Unit or format |
 |---|---|---|
-| `timestamp` | 采样时间 | `YYYY-MM-DD HH:MM:SS` |
-| `chiller_id` | 机组编号 | 文本 |
-| `chw_supply_c` | 冷冻水供水温度 | °C |
-| `chw_return_c` | 冷冻水回水温度 | °C |
-| `flow_m3h` | 冷冻水流量 | m³/h |
-| `power_kw` | 机组电功率 | kW |
-| `outdoor_temp_c` | 室外温度 | °C |
+| `timestamp` | Sample timestamp | `YYYY-MM-DD HH:MM:SS` |
+| `chiller_id` | Chiller identifier | Text |
+| `chw_supply_c` | Chilled-water supply temperature | °C |
+| `chw_return_c` | Chilled-water return temperature | °C |
+| `flow_m3h` | Chilled-water flow | m³/h |
+| `power_kw` | Chiller electric power | kW |
+| `outdoor_temp_c` | Outdoor air temperature | °C |
 
-示例文件在 `data/example_bms.csv`，是**模拟数据**，只用于演示。请确认现场流量和电功率均对应同一台机组、同一采样时刻。计算式为 `制冷量(kW) = 1.163 × 流量(m³/h) × (回水温度 - 供水温度)(°C)`，适用于以水为介质的常见近似计算；含乙二醇的系统应修改 `core.R` 的 `water_factor`。功率为非正、流量为非正、温差为非正、缺值或时间格式不符的记录会剔除。
+`data/example_bms.csv` contains **synthetic data** for demonstration only. Check that flow and power refer to the same chiller and sample time. The calculation is `cooling capacity (kW) = 1.163 × flow (m³/h) × (return - supply temperature) (°C)`, followed by `COP = cooling capacity / power`. The factor 1.163 is a common approximation for water. For glycol mixtures, adjust `water_factor` in `core.R` to match the fluid properties. Records with missing values, invalid timestamps, nonpositive flow or power, or nonpositive temperature difference are excluded.
 
-## R Markdown + ggplot2 版本
+## R Markdown and ggplot2 version
 
-安装 `ggplot2`、`rmarkdown`、`knitr`，并安装 XeLaTeX（例如 TinyTeX）后，在项目目录运行：
+Install `ggplot2`, `rmarkdown`, `knitr`, and XeLaTeX (for example, through TinyTeX). Then run the following from the project directory:
 
 ```r
 install.packages(c("ggplot2", "rmarkdown", "knitr", "tinytex"))
@@ -50,8 +50,8 @@ rmarkdown::render("report.Rmd", params = list(
 ))
 ```
 
-也可以在 RStudio 中打开 `report.Rmd`，使用 Knit with Parameters 修改参数并生成 PDF。若使用非 Windows 系统，需把模板中的 `mainfont` 和 `base_family` 改为本机支持中文的字体。
+You can also open `report.Rmd` in RStudio and use **Knit with Parameters**. On systems without Arial, change `mainfont` and `base_family` in the template to an installed font.
 
-## 结果解读
+## Interpreting the results
 
-图中红点表示低负荷且低 COP，橙点表示低 COP。低效时段占比按**有效采样点数**统计；若采样间隔不一致，不应把它直接当作耗电时长占比。体检表用于定位值得排查的工况，不代替设备性能测试或节能量核算。
+Red points indicate both low load and low COP; orange points indicate low COP alone. Percentages are based on the **number of valid samples**. If sampling intervals vary, these percentages do not represent operating-time or energy shares. The report is a quick screening tool, not a substitute for a formal performance test or energy-savings calculation. Set thresholds using the chiller's performance data and site conditions.

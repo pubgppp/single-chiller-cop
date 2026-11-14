@@ -1,10 +1,10 @@
 ---
-title: "单台冷机 COP 快速体检表"
+title: "Single-Chiller COP Quick Check"
 output:
   pdf_document:
     latex_engine: xelatex
     toc: false
-mainfont: "Microsoft YaHei"
+mainfont: "Arial"
 geometry: margin=2cm
 params:
   input: "data/example_bms.csv"
@@ -25,23 +25,23 @@ library(ggplot2)
 result <- load_cop_data(params$input, params$machine, params$rated_kw,
                         params$low_cop, params$low_load)
 x <- result$data
-x$status <- factor(ifelse(x$attention, "低负荷且低 COP",
-                   ifelse(x$low_efficiency, "低 COP", "正常")),
-                   levels = c("正常", "低 COP", "低负荷且低 COP"))
-palette <- c("正常" = "#2878a9", "低 COP" = "#e49c31",
-             "低负荷且低 COP" = "#d94841")
+x$status <- factor(ifelse(x$attention, "Low load + low COP",
+                   ifelse(x$low_efficiency, "Low COP", "Normal")),
+                   levels = c("Normal", "Low COP", "Low load + low COP"))
+palette <- c("Normal" = "#2878a9", "Low COP" = "#e49c31",
+             "Low load + low COP" = "#d94841")
 ```
 
-**机组：** `r result$machine_id`　
-**数据期间：** `r format(min(x$timestamp), "%Y-%m-%d")` 至 `r format(max(x$timestamp), "%Y-%m-%d")`　
-**额定制冷量：** `r result$rated_kw` kW
+**Chiller:** `r result$machine_id`  
+**Period:** `r format(min(x$timestamp), "%Y-%m-%d")` to `r format(max(x$timestamp), "%Y-%m-%d")`  
+**Rated cooling capacity:** `r result$rated_kw` kW
 
 ```{r summary}
-knitr::kable(cop_summary(result), col.names = c("指标", "结果"),
+knitr::kable(cop_summary(result), col.names = c("Metric", "Value"),
              align = c("l", "r"))
 ```
 
-## COP 与负荷率
+## COP vs Load Ratio
 
 ```{r load-scatter}
 ggplot(x, aes(load_ratio * 100, cop, colour = status)) +
@@ -51,11 +51,11 @@ ggplot(x, aes(load_ratio * 100, cop, colour = status)) +
   geom_vline(xintercept = result$low_load * 100, linetype = "dotted",
              colour = "#b94440") +
   scale_colour_manual(values = palette, drop = FALSE) +
-  labs(x = "负荷率 (%)", y = "实时 COP", colour = NULL) +
-  theme_minimal(base_family = "Microsoft YaHei")
+  labs(x = "Load ratio (%)", y = "Instantaneous COP", colour = NULL) +
+  theme_minimal(base_family = "Arial")
 ```
 
-## COP 与室外温度
+## COP vs Outdoor Temperature
 
 ```{r outdoor-scatter}
 ggplot(x, aes(outdoor_temp_c, cop, colour = status)) +
@@ -63,12 +63,12 @@ ggplot(x, aes(outdoor_temp_c, cop, colour = status)) +
   geom_hline(yintercept = result$low_cop, linetype = "dashed",
              colour = "#b94440") +
   scale_colour_manual(values = palette, drop = FALSE) +
-  labs(x = "室外温度 (°C)", y = "实时 COP", colour = NULL) +
-  theme_minimal(base_family = "Microsoft YaHei")
+  labs(x = "Outdoor temperature (°C)", y = "Instantaneous COP", colour = NULL) +
+  theme_minimal(base_family = "Arial")
 ```
 
-## 快速判断
+## Quick Assessment
 
-`r if (any(x$attention)) "有低负荷且低 COP 时段。建议先核对这些时段的运行时长、机组启停策略和冷冻水流量。" else if (any(x$low_efficiency)) "有低 COP 时段。建议结合负荷率与室外温度核对运行设定。" else "样本中未发现低于设定 COP 阈值的时段。"`
+`r if (any(x$attention)) "Low-load, low-COP points were found. Check operating duration, chiller staging strategy, and chilled-water flow." else if (any(x$low_efficiency)) "Low-COP points were found. Review operating settings against load ratio and outdoor temperature." else "No samples fell below the selected COP threshold."`
 
-制冷量按 `r result$water_factor` × 流量（m³/h）× 冷冻水回供水温差（°C）计算；COP = 制冷量 / 功率。低效阈值为 COP < `r result$low_cop`，低负荷阈值为额定制冷量的 `r round(result$low_load * 100)`%。已剔除 `r result$excluded` 条缺值、停机或温差异常记录。结果仅用于快速筛查，阈值应结合机组性能曲线和现场工况设定。
+Cooling capacity is calculated as `r result$water_factor` × flow (m³/h) × chilled-water return-minus-supply temperature (°C); COP = cooling capacity / electric power. Screening thresholds are COP < `r result$low_cop` and load ratio < `r round(result$low_load * 100)`%. `r result$excluded` records were excluded because of missing values, invalid timestamps, non-operating conditions, or nonpositive temperature differences. This report is for quick screening; set thresholds using the chiller's performance data and site conditions.
